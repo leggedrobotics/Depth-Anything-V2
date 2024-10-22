@@ -21,7 +21,7 @@ conda activate depthv2
 echo "Preparing the dataset"
 echo $TMPDIR
 
-src_dir=/cluster/work/rsl/patelm/imagenet-1k/
+src_dir=/cluster/work/rsl/patelm/imagenet-1k
 src_file=${src_dir}/$1.tar.gz
 outdir=$2/$1
 
@@ -30,13 +30,21 @@ echo "Output directory: ${outdir}"
 
 local_dir=$TMPDIR/${src_file}
 
+echo "Local directory: ${local_dir}"
+
 mkdir -p $local_dir
 tar -xzf $src_file -C $local_dir
 
+echo "Finished extracting the dataset"
+
 cd /cluster/home/patelm/ws/rsl/Depth-Anything-V2
+
 echo "Cuda visible devices ${CUDA_VISIBLE_DEVICES}"
 
 python run.py --img-path $local_dir --outdir $outdir --pred-only --grayscale --save-npz
+
+echo "Finished running the model"
+echo "Compressing the output"
 
 #Zip the output
 tar -czf $outdir.tar.gz $outdir
