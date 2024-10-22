@@ -2,6 +2,7 @@ import argparse
 import cv2
 import glob
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import torch
@@ -20,6 +21,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--pred-only', dest='pred_only', action='store_true', help='only display the prediction')
     parser.add_argument('--grayscale', dest='grayscale', action='store_true', help='do not apply colorful palette')
+    parser.add_argument('--save-npz', dest='save_npz', action='store_true', help='save the npz depth map in unit16')
     
     args = parser.parse_args()
     
@@ -47,7 +49,7 @@ if __name__ == '__main__':
     
     os.makedirs(args.outdir, exist_ok=True)
     
-    cmap = matplotlib.colormaps.get_cmap('Spectral_r')
+    cmap = plt.get_cmap('Spectral_r')
     
     for k, filename in enumerate(filenames):
         print(f'Progress {k+1}/{len(filenames)}: {filename}')
@@ -56,6 +58,10 @@ if __name__ == '__main__':
         
         depth = depth_anything.infer_image(raw_image, args.input_size)
         
+        if args.save_npz:
+            # save as npz file uint16
+            np.savez_compressed(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.npz'), depth=np.uint16(depth))
+
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
         depth = depth.astype(np.uint8)
         
