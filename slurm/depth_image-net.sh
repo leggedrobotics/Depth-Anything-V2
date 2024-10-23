@@ -3,7 +3,7 @@
 #SBATCH -n 8
 #SBATCH --time=36:00:00
 #SBATCH --mem-per-cpu=8000
-#SBATCH --tmp=100G
+#SBATCH --tmp=200G
 #SBATCH --gpus=1
 #SBATCH --gres=gpumem:16G
 #SBATCH --job-name=imagenet-depthanything
@@ -28,7 +28,8 @@ outdir=$2/$1
 echo "Source file: ${src_file}"
 echo "Output directory: ${outdir}"
 
-local_dir=$TMPDIR/${src_file}
+local_dir=$TMPDIR/{$1}
+local_outdir=$TMPDIR/imagenet-1k-depth-anything-v2/$1
 
 echo "Local directory: ${local_dir}"
 
@@ -41,10 +42,15 @@ cd /cluster/home/patelm/ws/rsl/Depth-Anything-V2
 
 echo "Cuda visible devices ${CUDA_VISIBLE_DEVICES}"
 
-python run.py --img-path $local_dir --outdir $outdir --pred-only --grayscale --save-npz
+python run.py --img-path $local_dir --outdir $local_outdir --pred-only --grayscale --save-npz
 
 echo "Finished running the model"
 echo "Compressing the output"
 
 #Zip the output
-tar -czf $outdir.tar.gz $outdir
+tar -czf ${outdir}_npz.tar.gz $outdir/*.npz
+tar -czf ${outdir}_png.tar.gz $outdir/*.png
+
+#copy to cluster scratch
+cp ${outdir}_npz.tar.gz $2
+cp ${outdir}_png.tar.gz $2
