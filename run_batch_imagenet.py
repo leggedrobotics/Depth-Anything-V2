@@ -19,7 +19,7 @@ from tqdm import tqdm
 # ========== Argument Parser ==========
 parser = argparse.ArgumentParser(description="Convert ImageNet-22K to Depth Maps (WebDataset)")
 parser.add_argument("--output-dir", type=str, required=True, help="Output directory for WebDataset shards")
-parser.add_argument("--batch-size", type=int, default=32, help="Batch size for processing")
+parser.add_argument("--batch-size", type=int, default=1, help="Batch size for processing")
 parser.add_argument("--input-size", type=int, default=518, help="Input size for DepthAnythingV2")
 parser.add_argument("--encoder", type=str, default="vitl", choices=["vits", "vitb", "vitl", "vitg"])
 parser.add_argument("--num-workers", type=int, default=8, help="Number of dataloader workers")
@@ -91,7 +91,7 @@ def normalize_depth(depth):
 
 def save_shard(data, shard_index):
     """Save a shard as a .tar file"""
-    shard_path = os.path.join(args.output_dir, f"shard-{shard_index:05d}.tar")
+    shard_path = os.path.join(args.output_dir, f"imagenet22k-train-shard-{shard_index:05d}.tar")
     
     with tarfile.open(shard_path, "w") as tar:
         for idx, (img_name, depth_bytes, cls) in enumerate(data):
@@ -124,7 +124,9 @@ for i, file in enumerate(files):
     print(f"Processing file {i + start_idx}: {file}")
     shard_index = i + start_idx
     urls = [hf_hub_url(file.repo_id, file.path_in_repo, repo_type="dataset")]
-    urls = f"pipe: curl --connect-timeout 60 --retry 10 --retry-delay 5 -f -s -L -H 'Authorization: Bearer {token}' {'::'.join(urls)}"
+    print(f"URLs before: {urls}")
+    urls = f"pipe: curl --connect-timeout 120 --retry 20 --retry-delay 10 -f -s -L -H 'Authorization: Bearer {token}' {'::'.join(urls)}"
+    print(f"URLs: {urls}")
     dataset = wds.WebDataset(urls).decode("rgb").to_tuple("__key__", "jpg", "json")
 
     with torch.no_grad():
