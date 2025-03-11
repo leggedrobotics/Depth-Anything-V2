@@ -177,60 +177,60 @@ if __name__ == '__main__':
             torch.cuda.synchronize()  # Ensure event is finished
             gpu_time = start_event.elapsed_time(end_event)  # GPU time in ms
 
-            for j in range(len(batch['paths'])):
-                img_path = batch['paths'][j]
-                original_h, original_w = batch['original_sizes'][j]
-                depth = depths[j]
+            # for j in range(len(batch['paths'])):
+            #     img_path = batch['paths'][j]
+            #     original_h, original_w = batch['original_sizes'][j]
+            #     depth = depths[j]
 
-                # Resize depth map to match original image dimensions
-                depth = torch.nn.functional.interpolate(
-                    depth.unsqueeze(1), 
-                    (original_h, original_w), 
-                    mode="bilinear", 
-                    align_corners=True
-                )[0, 0]
+            #     # Resize depth map to match original image dimensions
+            #     depth = torch.nn.functional.interpolate(
+            #         depth.unsqueeze(1), 
+            #         (original_h, original_w), 
+            #         mode="bilinear", 
+            #         align_corners=True
+            #     )[0, 0]
 
-                # Convert to numpy (Move to CPU asynchronously)
-                depth_np = depth.cpu().numpy()
+            #     # Convert to numpy (Move to CPU asynchronously)
+            #     depth_np = depth.cpu().numpy()
 
-                # Save as .npz if required
-                if args.save_npz:
-                    np.savez_compressed(
-                        os.path.join(args.output_dir, os.path.splitext(os.path.basename(img_path))[0] + '.npz'), 
-                        depth=np.uint16(depth_np)
-                    )
+            #     # Save as .npz if required
+            #     if args.save_npz:
+            #         np.savez_compressed(
+            #             os.path.join(args.output_dir, os.path.splitext(os.path.basename(img_path))[0] + '.npz'), 
+            #             depth=np.uint16(depth_np)
+            #         )
 
-                # Normalize depth for visualization
-                depth_viz = (depth_np - depth_np.min()) / (depth_np.max() - depth_np.min()) * 255.0
-                depth_viz = depth_viz.astype(np.uint8)
+            #     # Normalize depth for visualization
+            #     depth_viz = (depth_np - depth_np.min()) / (depth_np.max() - depth_np.min()) * 255.0
+            #     depth_viz = depth_viz.astype(np.uint8)
 
-                # Apply colormap unless grayscale is requested
-                if args.grayscale:
-                    depth_viz = np.repeat(depth_viz[..., np.newaxis], 3, axis=-1)
-                else:
-                    depth_viz = (plt.get_cmap("magma")(depth_viz)[:, :, :3] * 255).astype(np.uint8)
+            #     # Apply colormap unless grayscale is requested
+            #     if args.grayscale:
+            #         depth_viz = np.repeat(depth_viz[..., np.newaxis], 3, axis=-1)
+            #     else:
+            #         depth_viz = (plt.get_cmap("magma")(depth_viz)[:, :, :3] * 255).astype(np.uint8)
 
-                # Save output visualization
-                output_path = os.path.join(args.output_dir, os.path.splitext(os.path.basename(img_path))[0] + '.png')
+            #     # Save output visualization
+            #     output_path = os.path.join(args.output_dir, os.path.splitext(os.path.basename(img_path))[0] + '.png')
 
-                if args.pred_only:
-                    cv2.imwrite(output_path, depth_viz)
-                else:
-                    # Read original image for side-by-side comparison
-                    original_img = cv2.imread(img_path)
+            #     if args.pred_only:
+            #         cv2.imwrite(output_path, depth_viz)
+            #     else:
+            #         # Read original image for side-by-side comparison
+            #         original_img = cv2.imread(img_path)
 
-                    # Resize original image if needed to match depth map height
-                    if original_img.shape[0] != depth_viz.shape[0]:
-                        scale = depth_viz.shape[0] / original_img.shape[0]
-                        new_width = int(original_img.shape[1] * scale)
-                        original_img = cv2.resize(original_img, (new_width, depth_viz.shape[0]), interpolation=cv2.INTER_AREA)
+            #         # Resize original image if needed to match depth map height
+            #         if original_img.shape[0] != depth_viz.shape[0]:
+            #             scale = depth_viz.shape[0] / original_img.shape[0]
+            #             new_width = int(original_img.shape[1] * scale)
+            #             original_img = cv2.resize(original_img, (new_width, depth_viz.shape[0]), interpolation=cv2.INTER_AREA)
 
-                    # Create separator
-                    separator = np.ones((depth_viz.shape[0], 50, 3), dtype=np.uint8) * 255
+            #         # Create separator
+            #         separator = np.ones((depth_viz.shape[0], 50, 3), dtype=np.uint8) * 255
 
-                    # Concatenate original and depth images
-                    combined = cv2.hconcat([original_img, separator, depth_viz])
-                    cv2.imwrite(output_path, combined)
+            #         # Concatenate original and depth images
+            #         combined = cv2.hconcat([original_img, separator, depth_viz])
+            #         cv2.imwrite(output_path, combined)
 
             batch_time = time.time() - batch_start  # CPU batch time
             total_time += batch_time  # Accumulate total time
