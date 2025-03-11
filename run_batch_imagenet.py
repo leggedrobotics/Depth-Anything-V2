@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from depth_anything_v2.util.transform import Resize, NormalizeImage, PrepareForNet
 import json
 from tqdm import tqdm
+import io
 
 # ========== Argument Parser ==========
 parser = argparse.ArgumentParser(description="Convert ImageNet-22K to Depth Maps (WebDataset)")
@@ -90,27 +91,26 @@ def normalize_depth(depth):
     return ((depth_np - depth_np.min()) / (depth_np.max() - depth_np.min()) * 255).astype(np.uint8)
 
 def save_shard(data, shard_index):
-    """Save a shard as a .tar file"""
+    """Save a shard as a .tar file more efficiently"""
     shard_path = os.path.join(args.output_dir, f"imagenet22k-train-shard-{shard_index:05d}.tar")
-    
+
     with tarfile.open(shard_path, "w") as tar:
         for idx, (img_name, depth_bytes, cls) in enumerate(data):
-            # Remove extension from image name
+            # Remove file extension from image name
             img_name = os.path.splitext(img_name)[0]
-            
-            # Save depth image as PNG inside the tar file
-            with tempfile.NamedTemporaryFile(delete=False) as tmp_depth:
-                tmp_depth.write(depth_bytes)
-                tmp_depth.close()
-                tar.add(tmp_depth.name, arcname=f"{img_name}.png")
-                os.unlink(tmp_depth.name)
 
-            # Save class metadata as JSON inside the tar file
-            with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_cls:  # Open in text mode ('w')
-                json.dump(cls, tmp_cls)  # Directly dump cls (not wrapping in another dict)
-                tmp_cls.close()
-                tar.add(tmp_cls.name, arcname=f"{img_name}.json")
-                os.unlink(tmp_cls.name)
+            # Create in-memory depth image
+            depth_file = io.BytesIO(depth_bytes)
+            depth_info = tarfile.TarInfo(f"{img_name}.png")
+            depth_info.size = len(depth_bytes)
+            tar.addfile(depth_info, depth_file)
+
+            # Create in-memory JSON file
+            json_bytes = json.dumps(cls).encode("utf-8")
+            json_file = io.BytesIO(json_bytes)
+            json_info = tarfile.TarInfo(f"{img_name}.json")
+            json_info.size = len(json_bytes)
+            tar.addfile(json_info, json_file)
 
     print(f"✅ Saved {shard_path}")
 
