@@ -20,32 +20,37 @@ def extract_pngs_from_tar(tar_path, keyword):
             if not member.name.lower().endswith(".png"):
                 continue
 
-            f = tar.extractfile(member)
-            if f is None:
+            try:
+                f = tar.extractfile(member)
+                if f is None:
+                    continue
+
+                img_bytes = f.read()
+                img = Image.open(io.BytesIO(img_bytes))
+                img.load()  # ensure it's fully loaded
+
+                width, height = img.size
+
+                meta = {
+                    "filename": os.path.basename(member.name),
+                    "width": width,
+                    "height": height,
+                    "bit_depth": "16-bit",
+                    "depth_resolution": 512.0,
+                    "root_name": tar_root_name,
+                    "dataset": keyword,
+                }
+
+                key = os.path.splitext(os.path.basename(member.name))[0]
+
+                images.append({
+                    "__key__": key,
+                    "png": img_bytes,
+                    "json": json.dumps(meta).encode("utf-8"),
+                })
+            except Exception as e:
+                print(f"⚠️ Skipping file '{member.name}' in tar '{tar_path}' due to error: {e}")
                 continue
-
-            # Read PNG bytes
-            img_bytes = f.read()
-            img = Image.open(io.BytesIO(img_bytes))
-            width, height = img.size
-
-            meta = {
-                "filename": os.path.basename(member.name),
-                "width": width,
-                "height": height,
-                "bit_depth": "16-bit",
-                "depth_resolution":  512.0,
-                "root_name": tar_root_name,
-                "dataset": keyword,
-            }
-
-            key = os.path.splitext(os.path.basename(member.name))[0]
-
-            images.append({
-                "__key__": key,
-                "png": img_bytes,
-                "json": json.dumps(meta).encode("utf-8"),
-            })
 
     return images
 
