@@ -35,7 +35,7 @@ def extract_pngs_from_zip(zip_path, fps_scale, keyword):
                     "width": width,
                     "height": height,
                     "bit_depth": "16-bit",
-                    "depth_resolution": 512.0,
+                    "depth_multiplier": 1000,
                     "root_name": zip_root_name,
                     "dataset": keyword,
                 }
